@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多空波浪计算器</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; background: #f0f2f5; }
+        .calculator { background: white; border-radius: 8px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: relative; }
+        .wave-section { margin-bottom: 25px; padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; }
+        h3 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px; margin-bottom: 15px; }
+        .input-group { margin: 12px 0; }
+        label { display: inline-block; width: 160px; font-weight: 500; color: #34495e; }
+        input { width: 200px; padding: 8px; border: 1px solid #dcdcdc; border-radius: 4px; font-size: 14px; }
+        input[readonly] { background: #f8f9fa; color: #666; }
+        .button-group { text-align: center; margin: 25px 0 35px; }
+        button { padding: 10px 25px; margin: 0 10px; border: none; border-radius: 5px; cursor: pointer; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        .calculate-btn { background: #3498db; color: white; }
+        .clear-btn { background: #95a5a6; color: white; }
+        .error-message { display: none; background: #fee; color: #d33; padding: 12px; border-radius: 4px; margin-bottom: 15px; }
+        .mode-switcher {
+            position: absolute;
+            top: 15px;
+            right: 25px;
+        }
+        .switch-container {
+            width: 120px;
+            height: 34px;
+            background-color: #e74c3c;
+            border-radius: 17px;
+            position: relative;
+            cursor: pointer;
+            margin-bottom: 15px;
+            transition: background-color 0.3s;
+            overflow: hidden;
+        }
+        .switch-container.active {
+            background-color: #2ecc71;
+        }
+        .switch-slider {
+            width: 60px;
+            height: 30px;
+            background-color: white;
+            border-radius: 15px;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .switch-container.active .switch-slider {
+            left: 58px;
+        }
+        .language-switcher {
+            position: absolute;
+            top: 15px;
+            left: 25px;
+            z-index: 100;
+        }
+        #languageSelect {
+            padding: 6px 12px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <div class="language-switcher">
+            <select id="languageSelect" onchange="setLanguage(this.value)">
+                <option value="zh-CN">简体中文</option>
+                <option value="zh-TW">繁體中文</option>
+                <option value="en">English</option>
+                <option value="ja">日本語</option>
+            </select>
+        </div>
+
+        <div class="mode-switcher">
+            <div class="switch-container" id="modeSwitch">
+                <div class="switch-slider"></div>
+            </div>
+        </div>
+        <br><br>
+        <h2 data-i18n="title" style="text-align: center;">多空波浪计算器</h2>
+        <div class="button-group">
+            <button class="calculate-btn" onclick="calculate()" data-i18n="calculate">立即计算</button>
+            <button class="clear-btn" onclick="clearInputs()" data-i18n="reset">重置数据</button>
+        </div>
+
+        <div class="wave-section">
+            <div id="wave1_error" class="error-message"></div>
+            <h3 data-i18n="wave1">一浪参数</h3>
+            <div class="input-group">
+                <label data-i18n="wave1_start">一浪起点：</label>
+                <input type="text" inputmode="decimal" id="wave1_start" value="7">
+            </div>
+            <div class="input-group">
+                <label data-i18n="wave1_end">一浪终点：</label>
+                <input type="text" inputmode="decimal" id="wave1_end" value="9">
+            </div>
+        </div>
+
+        <div class="wave-section">
+            <h3 data-i18n="wave2">二浪参数</h3>
+            <div class="input-group">
+                <label data-i18n="wave2_retrace">二浪回调点：</label>
+                <input type="text" inputmode="decimal" id="wave2_retrace" value="8">
+            </div>
+        </div>
+
+        <div class="wave-section">
+            <h3 data-i18n="wave3_prediction">三浪预测</h3>
+            <div class="input-group">
+                <label data-i18n="wave3_short">三浪短幅：</label>
+                <input type="text" id="wave3_short" readonly>
+            </div>
+            <div class="input-group">
+                <label data-i18n="wave3_long">三浪长幅：</label>
+                <input type="text" id="wave3_long" readonly>
+            </div>
+            <div class="input-group">
+                <label data-i18n="wave3_short_target">三浪短目标：</label>
+                <input type="text" id="wave3_short_target" readonly>
+            </div>
+            <div class="input-group">
+                <label data-i18n="wave3_long_target">三浪长目标：</label>
+                <input type="text" id="wave3_long_target" readonly>
+            </div>
+        </div>
+
+        <div class="wave-section">
+            <h3 data-i18n="wave5_prediction">五浪预测</h3>
+            <div class="input-group">
+                <label data-i18n="wave5_short">五浪短幅：</label>
+                <input type="text" id="wave5_short" readonly>
+            </div>
+            <div class="input-group">
+                <label data-i18n="wave5_long">五浪长幅：</label>
+                <input type="text" id="wave5_long" readonly>
+            </div>
+            <div class="input-group">
+                <label data-i18n="final_short">最终短目标：</label>
+                <input type="text" id="total_short" readonly>
+            </div>
+            <div class="input-group">
+                <label data-i18n="final_long">最终长目标：</label>
+                <input type="text" id="total_long" readonly>
+            </div>
+        </div>
+    </div>
+
+<script>
+"use strict";
+const translations = {
+    'zh-CN': {
+        'title': '多空波浪计算器',
+        'calculate': '立即计算',
+        'reset': '重置数据',
+        'wave1': '一浪参数',
+        'wave1_start': '一浪起点：',
+        'wave1_end': '一浪终点：',
+        'wave2': '二浪参数',
+        'wave2_retrace': '二浪回调点：',
+        'wave3_prediction': '三浪预测',
+        'wave3_short': '三浪短幅：',
+        'wave3_long': '三浪长幅：',
+        'wave3_short_target': '三浪短目标：',
+        'wave3_long_target': '三浪长目标：',
+        'wave5_prediction': '五浪预测',
+        'wave5_short': '五浪短幅：',
+        'wave5_long': '五浪长幅：',
+        'final_short': '最终短目标：',
+        'final_long': '最终长目标：',
+        'error1': '所有参数必须为有效数字',
+        'error2_long': '一浪起点必须低于终点',
+        'error2_short': '一浪起点必须高于终点',
+        'error3': '二浪回调点必须在第一浪价格区间内',
+        'long': '做多',
+        'short': '做空'
+    },
+    'zh-TW': {
+        'title': '多空波浪計算器',
+        'calculate': '立即計算',
+        'reset': '重置數據',
+        'wave1': '一浪參數',
+        'wave1_start': '一浪起點：',
+        'wave1_end': '一浪終點：',
+        'wave2': '二浪參數',
+        'wave2_retrace': '二浪回調點：',
+        'wave3_prediction': '三浪預測',
+        'wave3_short': '三浪短幅：',
+        'wave3_long': '三浪長幅：',
+        'wave3_short_target': '三浪短目標：',
+        'wave3_long_target': '三浪長目標：',
+        'wave5_prediction': '五浪預測',
+        'wave5_short': '五浪短幅：',
+        'wave5_long': '五浪長幅：',
+        'final_short': '最終短目標：',
+        'final_long': '最終長目標：',
+        'error1': '所有參數必須為有效數字',
+        'error2_long': '一浪起點必須低於終點',
+        'error2_short': '一浪起點必須高於終點',
+        'error3': '二浪回調點必須在第一浪價格區間內',
+        'long': '做多',
+        'short': '做空'
+    },
+    'en': {
+        'title': 'Long/Short Wave Calculator',
+        'calculate': 'Calculate',
+        'reset': 'Reset',
+        'wave1': 'Wave 1 Parameters',
+        'wave1_start': 'Wave 1 Start:',
+        'wave1_end': 'Wave 1 End:',
+        'wave2': 'Wave 2 Parameters',
+        'wave2_retrace': 'Wave 2 Retrace:',
+        'wave3_prediction': 'Wave 3 Prediction',
+        'wave3_short': 'Wave 3 Short:',
+        'wave3_long': 'Wave 3 Long:',
+        'wave3_short_target': 'Wave 3 Short Target:',
+        'wave3_long_target': 'Wave 3 Long Target:',
+        'wave5_prediction': 'Wave 5 Prediction',
+        'wave5_short': 'Wave 5 Short:',
+        'wave5_long': 'Wave 5 Long:',
+        'final_short': 'Final Short Target:',
+        'final_long': 'Final Long Target:',
+        'error1': 'All parameters must be valid numbers',
+        'error2_long': 'Wave 1 start must be lower than end',
+        'error2_short': 'Wave 1 start must be higher than end',
+        'error3': 'Wave 2 retrace must be within Wave 1 range',
+        'long': 'Long',
+        'short': 'Short'
+    },
+    'ja': {
+        'title': 'ロング/ショート波動計算機',
+        'calculate': '計算する',
+        'reset': 'リセット',
+        'wave1': '第1波パラメータ',
+        'wave1_start': '第1波開始点：',
+        'wave1_end': '第1波終了点：',
+        'wave2': '第2波パラメータ',
+        'wave2_retrace': '第2波戻り値：',
+        'wave3_prediction': '第3波予測',
+        'wave3_short': '第3波短期：',
+        'wave3_long': '第3波長期：',
+        'wave3_short_target': '第3波短期目標：',
+        'wave3_long_target': '第3波長期目標：',
+        'wave5_prediction': '第5波予測',
+        'wave5_short': '第5波短期：',
+        'wave5_long': '第5波長期：',
+        'final_short': '最終短期目標：',
+        'final_long': '最終長期目標：',
+        'error1': 'すべてのパラメータは有効な数値でなければなりません',
+        'error2_long': '第1波の開始点は終了点より低くなければなりません',
+        'error2_short': '第1波の開始点は終了点より高くなければなりません',
+        'error3': '第2波の戻り値は第1波の範囲内である必要があります',
+        'long': 'ロング',
+        'short': 'ショート'
+    }
+};
+
+let isLongMode = true;
+const FIB = Object.freeze({
+    WAVE3: 1.6180339887,
+    WAVE5_SHORT: 3.23606798,
+    WAVE5_LONG: 4.23606798,
+    PRECISION: 6
+});
+
+function setLanguage(lang) {
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        el.textContent = translations[lang][key] || '';
+    });
+    const errorElement = document.getElementById('wave1_error');
+    if (errorElement.style.display !== 'none') {
+        const errorKey = errorElement.dataset.errorKey;
+        if (errorKey) errorElement.textContent = `⚠️ ${translations[lang][errorKey]}`;
+    }
+    localStorage.setItem('userLang', lang);
+    updateModeSwitchText(lang);
+}
+
+function updateModeSwitchText(lang) {
+    const switchSlider = document.querySelector('.switch-slider');
+    switchSlider.textContent = isLongMode ? translations[lang]['long'] : translations[lang]['short'];
+}
+
+function initLanguage() {
+    const savedLang = localStorage.getItem('userLang') || 'zh-CN';
+    document.getElementById('languageSelect').value = savedLang;
+    setLanguage(savedLang);
+}
+
+function toggleTradeMode() {
+    const wave1StartInput = document.getElementById('wave1_start');
+    const wave1EndInput = document.getElementById('wave1_end');
+    [wave1StartInput.value, wave1EndInput.value] = [wave1EndInput.value, wave1StartInput.value];
+    
+    isLongMode = !isLongMode;
+    const switchContainer = document.querySelector('.switch-container');
+    switchContainer.classList.toggle('active', isLongMode);
+    updateModeSwitchText(document.documentElement.lang);
+    calculate();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initLanguage();
+    document.getElementById('modeSwitch').addEventListener('click', toggleTradeMode);
+});
+
+function validateInputs() {
+    const wave1Start = parseFloat(document.getElementById('wave1_start').value);
+    const wave1End = parseFloat(document.getElementById('wave1_end').value);
+    const wave2Retrace = parseFloat(document.getElementById('wave2_retrace').value);
+    const errorElement = document.getElementById('wave1_error');
+
+    if ([wave1Start, wave1End, wave2Retrace].some(isNaN)) {
+        showError("error1");
+        return false;
+    }
+
+    if (isLongMode ? (wave1Start >= wave1End) : (wave1Start <= wave1End)) {
+        showError(isLongMode ? "error2_long" : "error2_short");
+        return false;
+    }
+
+    const [minPrice, maxPrice] = [Math.min(wave1Start, wave1End), Math.max(wave1Start, wave1End)];
+    if (wave2Retrace <= minPrice || wave2Retrace >= maxPrice) {
+        showError("error3");
+        return false;
+    }
+
+    errorElement.style.display = 'none';
+    return true;
+
+    function showError(errorKey) {
+        errorElement.style.display = 'block';
+        errorElement.dataset.errorKey = errorKey;
+        errorElement.textContent = `⚠️ ${translations[document.documentElement.lang][errorKey]}`;
+    }
+}
+
+function preciseRound(num) {
+    const factor = Math.pow(10, FIB.PRECISION);
+    return Math.round(num * factor) / factor;
+}
+
+function calculate() {
+    if (!validateInputs()) return;
+
+    try {
+        const wave1Start = parseFloat(document.getElementById('wave1_start').value);
+        const wave1End = parseFloat(document.getElementById('wave1_end').value);
+        const wave2Retrace = parseFloat(document.getElementById('wave2_retrace').value);
+
+        const baseDifference = Math.abs(wave1End - wave1Start);
+        const direction = isLongMode ? 1 : -1;
+
+        const wave3Short = preciseRound(baseDifference * FIB.WAVE3);
+        const wave3Long = preciseRound(baseDifference * 2);
+        const wave3ShortTarget = preciseRound(wave2Retrace + wave3Short * direction);
+        const wave3LongTarget = preciseRound(wave2Retrace + wave3Long * direction);
+
+        const wave5Short = preciseRound(baseDifference * FIB.WAVE5_SHORT);
+        const wave5Long = preciseRound(baseDifference * FIB.WAVE5_LONG);
+
+        let totalShort, totalLong;
+        if (isLongMode) {
+            totalShort = preciseRound(wave1Start + wave5Short);
+            totalLong = preciseRound(wave1Start + wave5Long);
+        } else {
+            totalShort = preciseRound(wave1Start - wave5Short);
+            totalLong = preciseRound(wave1Start - wave5Long);
+        }
+
+        updateResults({
+            wave3_short: wave3Short,
+            wave3_long: wave3Long,
+            wave3_short_target: wave3ShortTarget,
+            wave3_long_target: wave3LongTarget,
+            wave5_short: wave5Short,
+            wave5_long: wave5Long,
+            total_short: totalShort,
+            total_long: totalLong
+        });
+
+    } catch (error) {
+        alert(`Calculation Error: ${error.message}`);
+    }
+}
+
+function updateResults(data) {
+    Object.entries(data).forEach(([id, value]) => {
+        document.getElementById(id).value = value.toFixed(FIB.PRECISION);
+    });
+}
+
+function clearInputs() {
+    document.getElementById('wave1_start').value = '';
+    document.getElementById('wave1_end').value = '';
+    document.getElementById('wave2_retrace').value = '';
+    document.querySelectorAll('input[readonly]').forEach(input => input.value = '');
+}
+
+document.querySelectorAll('input:not([readonly])').forEach(input => {
+    input.addEventListener('input', calculate);
+});
+</script>
+</body>
+</html>
